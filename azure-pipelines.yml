@@ -1,0 +1,54 @@
+trigger:
+  - main
+  - master
+
+pool:
+  name: 'Default'
+  demands:
+    - Agent.Name -equals VENKAT
+
+variables:
+  workingDirectory: '$(System.DefaultWorkingDirectory)'
+
+stages:
+  - stage: Build
+    displayName: 'Build Stage'
+    jobs:
+      - job: TestJob
+        displayName: 'Test and Display Content'
+        steps:
+          - checkout: self
+
+          - task: PowerShell@2
+            displayName: 'Display helloworld.html content'
+            condition: succeeded()
+            inputs:
+              targetType: 'inline'
+              script: |
+                Write-Host "=== Displaying helloworld.html ==="
+                Get-Content -Path "$(workingDirectory)/helloworld.html"
+
+          - task: PowerShell@2
+            displayName: 'Run test.sh script'
+            condition: succeeded()
+            inputs:
+              targetType: 'inline'
+              script: |
+                Write-Host "=== Running test.sh script ==="
+                bash $(workingDirectory)/test.sh
+
+          - task: PowerShell@2
+            displayName: 'Curl helloworld.html (if HTTP server available)'
+            condition: succeeded()
+            inputs:
+              targetType: 'inline'
+              script: |
+                Write-Host "=== Attempting to curl helloworld.html ==="
+                Write-Host "Note: This will work if you have a local HTTP server running"
+                Try {
+                  $response = Invoke-WebRequest -Uri "http://localhost/helloworld.html" -ErrorAction SilentlyContinue
+                  Write-Host $response.Content
+                } Catch {
+                  Write-Host "HTTP server not available. Displaying file content directly:"
+                  Get-Content -Path "$(workingDirectory)/helloworld.html"
+                }
